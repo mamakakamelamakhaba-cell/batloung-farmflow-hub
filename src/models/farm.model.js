@@ -4,12 +4,12 @@
 const sizeList = ['SMALL', 'MEDIUM', 'LARGE'];
 const num = (v) => Number(v ?? 0);
 
-const SUPPLIER_COLS = `id, business_name AS businessName, contact_person AS contactPerson,
+const SUPPLIER_COLS = `id, business_name AS "businessName", contact_person AS "contactPerson",
                        phone, province, address`;
 const FRUIT_COLS = `id, name, description, status,
-                    small_price AS smallPrice, medium_price AS mediumPrice,
-                    large_price AS largePrice`;
-const VENDOR_COLS = `id, name, phone, location, registration_date AS registrationDate`;
+                    small_price AS "smallPrice", medium_price AS "mediumPrice",
+                    large_price AS "largePrice"`;
+const VENDOR_COLS = `id, name, phone, location, registration_date AS "registrationDate"`;
 
 /** Convert snake_case object keys to camelCase (PostgreSQL returns lowercase). */
 function toCamel(obj) {
@@ -69,95 +69,95 @@ export function createFarmRepository(query, queryOne, transaction) {
       case 'activity': {
         const rows = await query(`
           SELECT * FROM (
-            SELECT CONCAT('P-', p.id) AS id, 'PURCHASE' AS type, 'Supplier purchase' AS title,
-                   s.business_name AS description, p.total_amount AS amount, p.purchase_date AS date
+            SELECT CONCAT('P-', p.id) AS "id", 'PURCHASE' AS "type", 'Supplier purchase' AS "title",
+                   s.business_name AS "description", p.total_amount AS "amount", p.purchase_date AS "date"
             FROM purchases p JOIN suppliers s ON s.id = p.supplier_id
             UNION ALL
             SELECT CONCAT('S-', s.id), 'SALE', 'Vendor sale', v.name,
                    s.total_amount, s.sale_date
             FROM sales s JOIN vendors v ON v.id = s.vendor_id
           ) u
-          ORDER BY date DESC, id DESC
+          ORDER BY "date" DESC, "id" DESC
           LIMIT 10`);
-        return toCamel(rows.map((r) => ({ ...r, amount: num(r.amount) })));
+        return rows.map((r) => ({ ...r, amount: num(r.amount) }));
       }
 
       case 'top_fruits': {
         const rows = await query(`
-          SELECT f.id AS fruitId, f.name AS fruitName, SUM(sd.quantity) AS boxesSold
+          SELECT f.id AS "fruitId", f.name AS "fruitName", SUM(sd.quantity) AS "boxesSold"
           FROM fruits f JOIN sale_details sd ON sd.fruit_id = f.id
           GROUP BY f.id, f.name
-          ORDER BY boxesSold DESC, f.name
+          ORDER BY "boxesSold" DESC, f.name
           LIMIT 5`);
-        return toCamel(rows.map((r) => ({ ...r, boxesSold: num(r.boxesSold) })));
+        return rows.map((r) => ({ ...r, boxesSold: num(r.boxesSold) }));
       }
 
       case 'top_vendor': {
         const row = await queryOne(`
-          SELECT v.id AS vendorId, v.name AS vendorName, COALESCE(SUM(sd.quantity),0) AS boxesPurchased
+          SELECT v.id AS "vendorId", v.name AS "vendorName", COALESCE(SUM(sd.quantity),0) AS "boxesPurchased"
           FROM vendors v
           LEFT JOIN sales s ON s.vendor_id = v.id
           LEFT JOIN sale_details sd ON sd.sale_id = s.id
           GROUP BY v.id, v.name
-          ORDER BY boxesPurchased DESC, v.name
+          ORDER BY "boxesPurchased" DESC, v.name
           LIMIT 1`);
         return row
-          ? toCamel({ ...row, boxesPurchased: num(row.boxesPurchased) })
+          ? { ...row, boxesPurchased: num(row.boxesPurchased) }
           : { vendorId: null, vendorName: null, boxesPurchased: 0 };
       }
 
       case 'stock': {
         const rows = await query(`
-          SELECT f.id AS fruitId, f.name AS fruitName, s.packaging_size AS packagingSize,
-                 s.available_quantity AS quantity, s.low_stock_threshold AS threshold
+          SELECT f.id AS "fruitId", f.name AS "fruitName", s.packaging_size AS "packagingSize",
+                 s.available_quantity AS "quantity", s.low_stock_threshold AS "threshold"
           FROM stock s JOIN fruits f ON f.id = s.fruit_id
           ORDER BY f.name, 
             CASE s.packaging_size WHEN 'SMALL' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LARGE' THEN 3 END`);
-        return toCamel(rows.map((r) => ({ ...r, quantity: num(r.quantity), threshold: num(r.threshold) })));
+        return rows.map((r) => ({ ...r, quantity: num(r.quantity), threshold: num(r.threshold) }));
       }
 
       case 'balances': {
         const rows = await query(`
           SELECT v.id, v.name, v.phone,
-                 COALESCE(SUM(s.total_amount),0) AS totalPurchased,
-                 COALESCE(SUM(s.paid_amount),0)  AS totalPaid,
-                 COALESCE(SUM(s.total_amount),0) - COALESCE(SUM(s.paid_amount),0) AS outstandingBalance
+                 COALESCE(SUM(s.total_amount),0) AS "totalPurchased",
+                 COALESCE(SUM(s.paid_amount),0)  AS "totalPaid",
+                 COALESCE(SUM(s.total_amount),0) - COALESCE(SUM(s.paid_amount),0) AS "outstandingBalance"
           FROM vendors v LEFT JOIN sales s ON s.vendor_id = v.id
           GROUP BY v.id, v.name, v.phone
           ORDER BY v.name`);
-        return toCamel(rows.map((r) => ({ ...r, totalPurchased: num(r.totalPurchased), totalPaid: num(r.totalPaid), outstandingBalance: num(r.outstandingBalance) })));
+        return rows.map((r) => ({ ...r, totalPurchased: num(r.totalPurchased), totalPaid: num(r.totalPaid), outstandingBalance: num(r.outstandingBalance) }));
       }
 
       case 'purchases': {
         const rows = await query(`
-          SELECT p.id, p.supplier_id AS supplierId, s.business_name AS supplierName,
-                 p.purchase_date AS purchaseDate, p.total_amount AS totalAmount,
-                 (SELECT COUNT(*) FROM purchase_details d WHERE d.purchase_id = p.id) AS itemCount
+          SELECT p.id, p.supplier_id AS "supplierId", s.business_name AS "supplierName",
+                 p.purchase_date AS "purchaseDate", p.total_amount AS "totalAmount",
+                 (SELECT COUNT(*) FROM purchase_details d WHERE d.purchase_id = p.id) AS "itemCount"
           FROM purchases p JOIN suppliers s ON s.id = p.supplier_id
           ORDER BY p.purchase_date DESC, p.id DESC`);
-        return toCamel(rows.map((r) => ({ ...r, totalAmount: num(r.totalAmount), itemCount: num(r.itemCount) })));
+        return rows.map((r) => ({ ...r, totalAmount: num(r.totalAmount), itemCount: num(r.itemCount) }));
       }
 
       case 'sales': {
         const rows = await query(`
-          SELECT s.id, s.vendor_id AS vendorId, v.name AS vendorName, s.sale_date AS saleDate,
-                 s.payment_method AS paymentMethod, s.payment_status AS paymentStatus,
-                 s.total_amount AS totalAmount, s.paid_amount AS paidAmount,
-                 (SELECT COUNT(*) FROM sale_details d WHERE d.sale_id = s.id) AS itemCount
+          SELECT s.id, s.vendor_id AS "vendorId", v.name AS "vendorName", s.sale_date AS "saleDate",
+                 s.payment_method AS "paymentMethod", s.payment_status AS "paymentStatus",
+                 s.total_amount AS "totalAmount", s.paid_amount AS "paidAmount",
+                 (SELECT COUNT(*) FROM sale_details d WHERE d.sale_id = s.id) AS "itemCount"
           FROM sales s JOIN vendors v ON v.id = s.vendor_id
           ORDER BY s.sale_date DESC, s.id DESC`);
-        return toCamel(rows.map((r) => ({ ...r, totalAmount: num(r.totalAmount), paidAmount: num(r.paidAmount), itemCount: num(r.itemCount) })));
+        return rows.map((r) => ({ ...r, totalAmount: num(r.totalAmount), paidAmount: num(r.paidAmount), itemCount: num(r.itemCount) }));
       }
 
       case 'low_stock': {
         const threshold = num(a ?? 20);
         const rows = await query(`
-          SELECT f.id AS fruitId, f.name AS fruitName, s.packaging_size AS packagingSize,
-                 s.available_quantity AS quantity, ? AS threshold
+          SELECT f.id AS "fruitId", f.name AS "fruitName", s.packaging_size AS "packagingSize",
+                 s.available_quantity AS "quantity", ? AS "threshold"
           FROM stock s JOIN fruits f ON f.id = s.fruit_id
           WHERE s.available_quantity <= ?
           ORDER BY s.available_quantity, f.name`, [threshold, threshold]);
-        return toCamel(rows.map((r) => ({ ...r, quantity: num(r.quantity), threshold })));
+        return rows.map((r) => ({ ...r, quantity: num(r.quantity), threshold }));
       }
 
       case 'revenue': {
@@ -483,8 +483,9 @@ export function createFarmRepository(query, queryOne, transaction) {
       if (!fruit) throw Object.assign(new Error('Fruit not found'), { status: 404 });
 
       const purchases = await query(`
-        SELECT pd.id, p.purchase_date, s.business_name as supplier, pd.packaging_size, pd.quantity, pd.unit_cost,
-               (pd.quantity * pd.unit_cost) as line_total
+        SELECT pd.id, p.purchase_date AS "purchaseDate", s.business_name AS "supplier", 
+               pd.packaging_size AS "packagingSize", pd.quantity, pd.unit_cost AS "unitCost",
+               (pd.quantity * pd.unit_cost) AS "lineTotal"
         FROM purchase_details pd
         JOIN purchases p ON pd.purchase_id = p.id
         JOIN suppliers s ON p.supplier_id = s.id
@@ -493,8 +494,9 @@ export function createFarmRepository(query, queryOne, transaction) {
       `, [fruitId]);
 
       const sales = await query(`
-        SELECT sd.id, s.sale_date, v.name as vendor, sd.packaging_size, sd.quantity, sd.unit_price,
-               (sd.quantity * sd.unit_price) as line_total
+        SELECT sd.id, s.sale_date AS "saleDate", v.name AS "vendor", 
+               sd.packaging_size AS "packagingSize", sd.quantity, sd.unit_price AS "unitPrice",
+               (sd.quantity * sd.unit_price) AS "lineTotal"
         FROM sale_details sd
         JOIN sales s ON sd.sale_id = s.id
         JOIN vendors v ON s.vendor_id = v.id
@@ -504,8 +506,8 @@ export function createFarmRepository(query, queryOne, transaction) {
 
       const totalPurchased = purchases.reduce((sum, p) => sum + p.quantity, 0);
       const totalSold = sales.reduce((sum, s) => sum + s.quantity, 0);
-      const totalPurchaseValue = purchases.reduce((sum, p) => sum + p.line_total, 0);
-      const totalSaleValue = sales.reduce((sum, s) => sum + s.line_total, 0);
+      const totalPurchaseValue = purchases.reduce((sum, p) => sum + p.lineTotal, 0);
+      const totalSaleValue = sales.reduce((sum, s) => sum + s.lineTotal, 0);
 
       return {
         fruit,
@@ -516,8 +518,8 @@ export function createFarmRepository(query, queryOne, transaction) {
           totalSaleValue,
           grossProfit: totalSaleValue - totalPurchaseValue,
         },
-        purchases: toCamel(purchases),
-        sales: toCamel(sales),
+        purchases,
+        sales,
       };
     });
   }
@@ -528,15 +530,17 @@ export function createFarmRepository(query, queryOne, transaction) {
       if (!vendor) throw Object.assign(new Error('Vendor not found'), { status: 404 });
 
       const sales = await query(`
-        SELECT s.id, s.sale_date, s.payment_method, s.payment_status, s.total_amount, s.paid_amount,
-               (s.total_amount - s.paid_amount) as outstanding
+        SELECT s.id, s.sale_date AS "saleDate", s.payment_method AS "paymentMethod", 
+               s.payment_status AS "paymentStatus", s.total_amount AS "totalAmount", 
+               s.paid_amount AS "paidAmount",
+               (s.total_amount - s.paid_amount) AS "outstanding"
         FROM sales s
         WHERE s.vendor_id = $1
         ORDER BY s.sale_date DESC
       `, [vendorId]);
 
       const saleDetails = await query(`
-        SELECT sd.*, f.name as fruit_name, s.sale_date
+        SELECT sd.*, f.name AS "fruitName", s.sale_date AS "saleDate"
         FROM sale_details sd
         JOIN sales s ON sd.sale_id = s.id
         JOIN fruits f ON sd.fruit_id = f.id
@@ -545,7 +549,7 @@ export function createFarmRepository(query, queryOne, transaction) {
       `, [vendorId]);
 
       const payments = await query(`
-        SELECT p.*, s.id as sale_id
+        SELECT p.*, s.id AS "saleId"
         FROM payments p
         JOIN sales s ON p.sale_id = s.id
         WHERE s.vendor_id = $1
@@ -553,8 +557,8 @@ export function createFarmRepository(query, queryOne, transaction) {
       `, [vendorId]);
 
       const totalPurchases = sales.length;
-      const totalAmount = sales.reduce((sum, s) => sum + Number(s.total_amount), 0);
-      const totalPaid = sales.reduce((sum, s) => sum + Number(s.paid_amount), 0);
+      const totalAmount = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
+      const totalPaid = sales.reduce((sum, s) => sum + Number(s.paidAmount), 0);
       const totalOutstanding = totalAmount - totalPaid;
 
       return {
@@ -565,9 +569,9 @@ export function createFarmRepository(query, queryOne, transaction) {
           totalPaid,
           totalOutstanding,
         },
-        sales: toCamel(sales),
-        saleDetails: toCamel(saleDetails),
-        payments: toCamel(payments),
+        sales,
+        saleDetails,
+        payments,
       };
     });
   }
