@@ -14,15 +14,9 @@ services:
         value: production
       - key: PORT
         value: 10000
-      - key: DB_HOST
-        sync: false       # paste from Aiven console
-      - key: DB_PORT
-        value: 12157
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_NAME
-        value: defaultdb
-      - key: DB_SSL
-        value: "true"
+      - key: DATABASE_URL
+        sync: false       # paste Neon connection string from Neon console
+      - key: JWT_SECRET
+        sync: false       # generate: openssl rand -base64 32
+      - key: FRONTEND_URL
+        value: https://batloung-farmflow-hub.onrender.com
