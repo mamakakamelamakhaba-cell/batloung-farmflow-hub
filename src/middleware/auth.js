@@ -28,7 +28,7 @@ export async function authenticateToken(req, res, next) {
   try {
     const decoded = verifyToken(token);
     const user = await queryOne(
-      'SELECT id, email, full_name, role, vendor_id, is_active FROM users WHERE id = ? AND is_active = TRUE',
+      'SELECT id, email, full_name, role, vendor_id, is_active FROM users WHERE id = $1 AND is_active = TRUE',
       [decoded.id]
     );
     

@@ -1,12 +1,12 @@
-// Quick connectivity + row-count check for the MySQL database.
+// Quick connectivity + row-count check for the PostgreSQL database.
 // Run with:  npm run db:check
 import 'dotenv/config';
-import { ping, pool } from '../config/db.js';
+import { ping, pool } from '../src/database/connection.js';
 
 try {
   const info = await ping();
   console.log(`Connected to ${process.env.DB_HOST || 'localhost'}`);
-  console.log(`Database: ${info.database}   MySQL: ${info.version}`);
+  console.log(`Database: ${info.database}   PostgreSQL: ${info.version}`);
   console.log('\nRow counts:');
   for (const [table, n] of Object.entries(info.counts)) {
     console.log(`  ${table.padEnd(12)} ${n}`);
@@ -20,7 +20,10 @@ try {
 } catch (err) {
   console.error('Connection failed:', err.code || err.message);
   if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') {
-    console.error('The DB_HOST in .env does not resolve. Check your local MySQL is running.');
+    console.error('The DB_HOST in .env does not resolve. Check your Neon/Supabase connection string.');
+  }
+  if (/password authentication failed/i.test(err.message)) {
+    console.error('Check DB_USER and DB_PASSWORD in .env.');
   }
   process.exitCode = 1;
 } finally {

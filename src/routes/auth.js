@@ -16,7 +16,7 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await queryOne(
-      'SELECT id, email, password_hash, full_name, role, vendor_id, is_active FROM users WHERE email = ?',
+      'SELECT id, email, password_hash, full_name, role, vendor_id, is_active FROM users WHERE email = $1',
       [email]
     );
 
@@ -34,7 +34,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Update last login
-    await query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+    await query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
     const token = generateToken(user);
 
@@ -71,13 +71,13 @@ router.post('/register', authenticateToken, async (req, res) => {
   }
 
   try {
-    const existing = await queryOne('SELECT id FROM users WHERE email = ?', [email]);
+    const existing = await queryOne('SELECT id FROM users WHERE email = $1', [email]);
     if (existing) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
     if (role === 'VENDOR' && vendorId) {
-      const vendor = await queryOne('SELECT id FROM vendors WHERE id = ?', [vendorId]);
+      const vendor = await queryOne('SELECT id FROM vendors WHERE id = $1', [vendorId]);
       if (!vendor) {
         return res.status(404).json({ error: 'Vendor not found' });
       }
@@ -86,13 +86,13 @@ router.post('/register', authenticateToken, async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const result = await query(
-      'INSERT INTO users (email, password_hash, full_name, role, vendor_id) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO users (email, password_hash, full_name, role, vendor_id) VALUES ($1, $2, $3, $4, $5) RETURNING id',
       [email, passwordHash, fullName, role, vendorId || null]
     );
 
     const newUser = await queryOne(
-      'SELECT id, email, full_name, role, vendor_id FROM users WHERE id = ?',
-      [result.insertId]
+      'SELECT id, email, full_name, role, vendor_id FROM users WHERE id = $1',
+      [result.rows[0].id]
     );
 
     res.status(201).json({ user: newUser });
@@ -128,7 +128,7 @@ router.put('/password', authenticateToken, async (req, res) => {
   }
 
   try {
-    const user = await queryOne('SELECT password_hash FROM users WHERE id = ?', [req.user.id]);
+    const user = await queryOne('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
     const valid = await bcrypt.compare(currentPassword, user.password_hash);
 
     if (!valid) {
@@ -136,7 +136,7 @@ router.put('/password', authenticateToken, async (req, res) => {
     }
 
     const newHash = await bcrypt.hash(newPassword, 10);
-    await query('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, req.user.id]);
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.user.id]);
 
     res.json({ message: 'Password updated successfully' });
   } catch (err) {
@@ -176,7 +176,7 @@ router.put('/users/:id/status', authenticateToken, async (req, res) => {
   }
 
   try {
-    await query('UPDATE users SET is_active = ? WHERE id = ?', [isActive, id]);
+    await query('UPDATE users SET is_active = $1 WHERE id = $2', [isActive, id]);
     res.json({ message: 'User status updated' });
   } catch (err) {
     console.error('Update user status error:', err);

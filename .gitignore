@@ -39,3 +39,4 @@ ca.pem
 *.njsproj
 *.sln
 *.sw?
+.neon

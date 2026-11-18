@@ -19,6 +19,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@neon/config": "^1.14.4",
+    "@neon/env": "^2.1.7",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",
@@ -61,8 +63,8 @@
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.575.0",
-    "mysql2": "^3.14.5",
     "nodemailer": "^10.6.0",
+    "pg": "^8.11.3",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.0",

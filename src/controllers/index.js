@@ -176,6 +176,6 @@ export const reportController = {
 export const healthController = {
   check: wrap(async (req, res) => {
     const info = await ping();
-    res.json({ status: 'ok', database: info.database, mysql: info.version, records: info.counts });
+    res.json({ status: 'ok', database: info.database, postgresql: info.version, records: info.counts });
   }),
 };
