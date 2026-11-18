@@ -11,6 +11,18 @@ const FRUIT_COLS = `id, name, description, status,
                     large_price AS largePrice`;
 const VENDOR_COLS = `id, name, phone, location, registration_date AS registrationDate`;
 
+/** Convert snake_case object keys to camelCase (PostgreSQL returns lowercase). */
+function toCamel(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(toCamel);
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    const camel = k.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+    out[camel] = toCamel(v);
+  }
+  return out;
+}
+
 const mapFruit = (f) => f && {
   ...f,
   smallPrice: num(f.smallPrice),
@@ -67,7 +79,7 @@ export function createFarmRepository(query, queryOne, transaction) {
           ) u
           ORDER BY date DESC, id DESC
           LIMIT 10`);
-        return rows.map((r) => ({ ...r, amount: num(r.amount) }));
+        return toCamel(rows.map((r) => ({ ...r, amount: num(r.amount) })));
       }
 
       case 'top_fruits': {
@@ -77,7 +89,7 @@ export function createFarmRepository(query, queryOne, transaction) {
           GROUP BY f.id, f.name
           ORDER BY boxesSold DESC, f.name
           LIMIT 5`);
-        return rows.map((r) => ({ ...r, boxesSold: num(r.boxesSold) }));
+        return toCamel(rows.map((r) => ({ ...r, boxesSold: num(r.boxesSold) })));
       }
 
       case 'top_vendor': {
@@ -90,7 +102,7 @@ export function createFarmRepository(query, queryOne, transaction) {
           ORDER BY boxesPurchased DESC, v.name
           LIMIT 1`);
         return row
-          ? { ...row, boxesPurchased: num(row.boxesPurchased) }
+          ? toCamel({ ...row, boxesPurchased: num(row.boxesPurchased) })
           : { vendorId: null, vendorName: null, boxesPurchased: 0 };
       }
 
@@ -101,7 +113,7 @@ export function createFarmRepository(query, queryOne, transaction) {
           FROM stock s JOIN fruits f ON f.id = s.fruit_id
           ORDER BY f.name, 
             CASE s.packaging_size WHEN 'SMALL' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LARGE' THEN 3 END`);
-        return rows.map((r) => ({ ...r, quantity: num(r.quantity), threshold: num(r.threshold) }));
+        return toCamel(rows.map((r) => ({ ...r, quantity: num(r.quantity), threshold: num(r.threshold) })));
       }
 
       case 'balances': {
@@ -113,7 +125,7 @@ export function createFarmRepository(query, queryOne, transaction) {
           FROM vendors v LEFT JOIN sales s ON s.vendor_id = v.id
           GROUP BY v.id, v.name, v.phone
           ORDER BY v.name`);
-        return rows.map((r) => ({ ...r, totalPurchased: num(r.totalPurchased), totalPaid: num(r.totalPaid), outstandingBalance: num(r.outstandingBalance) }));
+        return toCamel(rows.map((r) => ({ ...r, totalPurchased: num(r.totalPurchased), totalPaid: num(r.totalPaid), outstandingBalance: num(r.outstandingBalance) })));
       }
 
       case 'purchases': {
@@ -123,7 +135,7 @@ export function createFarmRepository(query, queryOne, transaction) {
                  (SELECT COUNT(*) FROM purchase_details d WHERE d.purchase_id = p.id) AS itemCount
           FROM purchases p JOIN suppliers s ON s.id = p.supplier_id
           ORDER BY p.purchase_date DESC, p.id DESC`);
-        return rows.map((r) => ({ ...r, totalAmount: num(r.totalAmount), itemCount: num(r.itemCount) }));
+        return toCamel(rows.map((r) => ({ ...r, totalAmount: num(r.totalAmount), itemCount: num(r.itemCount) })));
       }
 
       case 'sales': {
@@ -134,7 +146,7 @@ export function createFarmRepository(query, queryOne, transaction) {
                  (SELECT COUNT(*) FROM sale_details d WHERE d.sale_id = s.id) AS itemCount
           FROM sales s JOIN vendors v ON v.id = s.vendor_id
           ORDER BY s.sale_date DESC, s.id DESC`);
-        return rows.map((r) => ({ ...r, totalAmount: num(r.totalAmount), paidAmount: num(r.paidAmount), itemCount: num(r.itemCount) }));
+        return toCamel(rows.map((r) => ({ ...r, totalAmount: num(r.totalAmount), paidAmount: num(r.paidAmount), itemCount: num(r.itemCount) })));
       }
 
       case 'low_stock': {
@@ -145,7 +157,7 @@ export function createFarmRepository(query, queryOne, transaction) {
           FROM stock s JOIN fruits f ON f.id = s.fruit_id
           WHERE s.available_quantity <= ?
           ORDER BY s.available_quantity, f.name`, [threshold, threshold]);
-        return rows.map((r) => ({ ...r, quantity: num(r.quantity), threshold }));
+        return toCamel(rows.map((r) => ({ ...r, quantity: num(r.quantity), threshold })));
       }
 
       case 'revenue': {
@@ -504,8 +516,8 @@ export function createFarmRepository(query, queryOne, transaction) {
           totalSaleValue,
           grossProfit: totalSaleValue - totalPurchaseValue,
         },
-        purchases,
-        sales,
+        purchases: toCamel(purchases),
+        sales: toCamel(sales),
       };
     });
   }
@@ -553,9 +565,9 @@ export function createFarmRepository(query, queryOne, transaction) {
           totalPaid,
           totalOutstanding,
         },
-        sales,
-        saleDetails,
-        payments,
+        sales: toCamel(sales),
+        saleDetails: toCamel(saleDetails),
+        payments: toCamel(payments),
       };
     });
   }
